@@ -58,7 +58,6 @@ type RaftPersistState struct {
 	CurrentTerm       int
 	VoteFor           int
 	Log               []RaftLog
-	CurrentSnapshot   []byte
 	LastIncludedIndex int
 	LastIncludedTerm  int
 }
@@ -106,7 +105,9 @@ type Raft struct {
 	maxProcessId      int
 	quickSend         []chan struct{}
 
+	CurrentSnapshot   []byte
 	RaftPersistState
+
 	RaftLeaderState
 	RaftCandidateState
 }
@@ -152,7 +153,7 @@ func (e *GetStateEvent) Run(rf *Raft) {
 // where it can later be retrieved after a crash and restart.
 // see paper's Figure 2 for a description of what should be persistent.
 //
-func (rf *Raft) persist() {
+func (rf *Raft) persist(snapshot bool) {
 	if rf.killed() {
 		return
 	}
@@ -161,7 +162,11 @@ func (rf *Raft) persist() {
 	encoder.Encode(rf.RaftPersistState)
 	data := buffer.Bytes()
 	DPrintf("%v data length %v", rf.me, len(data))
-	rf.persister.SaveRaftState(data)
+  if snapshot {
+    rf.persister.SaveStateAndSnapshot(data, rf.CurrentSnapshot)
+  } else {
+    rf.persister.SaveRaftState(data)
+  }
 }
 
 //
@@ -348,7 +353,7 @@ func (rf *Raft) initPreCandidate() {
 }
 
 func (rf *Raft) changeStatus(term int, status int) {
-	defer rf.persist()
+	defer rf.persist(false)
 	if rf.CurrentTerm != term {
 		DPrintf("%v term change from %v to %v", rf.me, rf.CurrentTerm, term)
 		rf.CurrentTerm = term
@@ -377,7 +382,7 @@ func (rf *Raft) changeStatus(term int, status int) {
 
 func (rf *Raft) changeVoteFor(to int) {
 	if to != rf.VoteFor {
-		defer rf.persist()
+		defer rf.persist(false)
 		rf.VoteFor = to
 	}
 }
@@ -422,6 +427,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	// Your initialization code here (2A, 2B, 2C).
 
 	// initialize from state persisted before a crash
+  rf.CurrentSnapshot = rf.persister.ReadSnapshot()
 	rf.readPersist(persister.ReadRaftState())
 
 	// start ticker goroutine to start elections
