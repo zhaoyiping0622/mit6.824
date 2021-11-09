@@ -10,9 +10,14 @@ func (rs *RaftServer) applyLoop() {
   for {
     select {
     case <-rs.background.Done():return
-    case msg:=<-rs.applyCh:
+    case msg,ok:=<-rs.applyCh:
+      if !ok {
+        return
+      }
+      DPrintf("%v get msg %+v", rs.me, msg)
       if msg.CommandValid {
         if msg.CommandIndex <= rs.lastApplied {
+          DPrintf("%v ignore msg %+v", rs.me, msg)
           continue
         } else if msg.CommandIndex == rs.lastApplied + 1 {
           if op,ok:=msg.Command.(Op); ok {
@@ -28,12 +33,12 @@ func (rs *RaftServer) applyLoop() {
         } else {
           DPrintf("%v msg out of order lastApplied %v index %v", rs.me, rs.lastApplied, msg.CommandIndex)
         }
-      } else if msg.SnapshotValid {
+      } else if msg.SnapshotValid && rs.rf.CondInstallSnapshot(msg.SnapshotTerm, msg.SnapshotIndex, msg.Snapshot) {
         ctx,cancel:=context.WithCancel(rs.background)
         go rs.sendEvent(&ApplySnapshotEvent{
           done: cancel,
           snapshot: msg.Snapshot,
-          index: msg.CommandIndex,
+          index: msg.SnapshotIndex,
         })
         <-ctx.Done()
       }
@@ -58,13 +63,14 @@ func (e *ApplyCommandEvent) Run(rs *RaftServer) {
     session = new(Session)
     rs.sessions[op.SessionId] = session
   }
+  rs.lastApplied++
   if session.SeqNum+1 != op.SeqNum {
     return
   }
   session.SeqNum++
   reply := op.Command.Apply(rs.app)
   session.Result = reply
-  if trigger,ok:=rs.triggers[op.SessionId];ok {
+  if trigger,ok:=rs.triggers[op.SessionId];ok && op.SeqNum == trigger.seqNum {
     *trigger.result=*reply
     if trigger.done != nil {
       trigger.done()
@@ -80,15 +86,17 @@ type ApplySnapshotEvent struct {
   index int
 }
 func (e *ApplySnapshotEvent) Run(rs *RaftServer) {
+  DPrintf("%v apply snapshot with index %v", rs.me, e.index)
   if e.done != nil {
     defer e.done()
+  }
+  if rs.snapshotFinish != nil {
+    finish:=rs.snapshotFinish
+    defer finish()
+    rs.snapshotFinish = nil
   }
   if e.index <= rs.lastApplied {
     return
   }
   rs.loadSnapshot(e.snapshot, e.index)
-  if rs.snapshotFinish != nil {
-    rs.snapshotFinish()
-    rs.snapshotFinish = nil
-  }
 }

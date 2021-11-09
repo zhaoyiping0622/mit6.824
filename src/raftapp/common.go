@@ -24,6 +24,7 @@ func (e *KillEvent) Run(rs *RaftServer) {
     defer e.done()
   }
   atomic.StoreInt32(&rs.dead,1)
+  rs.rf.Kill()
 }
 
 var Debug bool

@@ -24,6 +24,10 @@ type CommandReply struct {
 }
 
 func (rs *RaftServer) CommandRequest(args *CommandArgs, reply *CommandReply) {
+  if args.Command == nil {
+    panic(args)
+  }
+  DPrintf("%v get CommandRequest args %+v", rs.me, args)
   op:=Op{
     SessionId: args.SessionId,
     SeqNum: args.SeqNum,
@@ -79,6 +83,7 @@ func (e *CommandRequestEvent) Run(rs *RaftServer) {
     done: e.done,
     result: e.reply,
     term: rs.term,
+    seqNum: e.seqNum,
   }
   if t,ok:=rs.triggers[e.sessionId];ok {
     if t.done != nil {

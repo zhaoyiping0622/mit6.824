@@ -50,12 +50,17 @@ func MakeRaftServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persist
   rs.persister = persister
   rs.maxraftstate = maxraftstate
   rs.app = app
+  rs.me = me
+  rs.events = make(chan Event, RaftEventLength)
+  rs.sessions = make(map[int64]*Session)
+  rs.triggers = make(map[int64]*Trigger)
 
   rs.background, rs.backgroundCancel = context.WithCancel(context.Background())
 
   go rs.statusTicker()
   go rs.eventLoop()
   go rs.applyLoop()
+  go rs.snapshotLoop()
 
   return rs
 }

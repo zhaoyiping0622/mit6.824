@@ -6,15 +6,14 @@ import (
 )
 
 func init() {
-  labgob.Register(GetCommand{})
-  labgob.Register(PutCommand{})
-  labgob.Register(AppendCommand{})
+  labgob.Register(&GetCommand{})
+  labgob.Register(&PutCommand{})
+  labgob.Register(&AppendCommand{})
 }
 
 type GetCommand struct {
   Key string
 }
-
 
 func(c *GetCommand) Apply(app raftapp.RaftApp) *raftapp.CommandReply {
   kvs:=getKVStore(app)

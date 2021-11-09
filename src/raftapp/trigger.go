@@ -6,4 +6,5 @@ type Trigger struct {
   done context.CancelFunc
   result *CommandReply
   term int
+  seqNum int
 }

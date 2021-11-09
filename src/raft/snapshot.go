@@ -7,11 +7,11 @@ import (
 
 type Snapshot []byte
 
-func (s *Snapshot) String() string {
+func (s Snapshot) String() string {
 	if s == nil {
 		return fmt.Sprint(nil)
 	} else {
-		return fmt.Sprintf("Snapshot{[%v ... %v] length %v}", (*s)[0], (*s)[len(*s)-1], len(*s))
+		return fmt.Sprintf("Snapshot{[%v ... %v] length %v}", s[0], s[len(s)-1], len(s))
 	}
 }
 

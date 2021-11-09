@@ -14,8 +14,6 @@ type RaftServerSnapshotState struct {
   Sessions map[int64]*Session
 }
 
-// TODO
-
 func (rs *RaftServer) loadSnapshot(snapshot raft.Snapshot, index int) {
   var state RaftServerSnapshotState
   buffer:=bytes.NewBuffer(snapshot)
@@ -40,7 +38,7 @@ func (rs *RaftServer) generateSnapshot() (raft.Snapshot, int) {
 }
 
 func (rs *RaftServer) needSnapshot() bool {
-  return rs.maxraftstate != -1 && rs.persister.SnapshotSize() >= rs.maxraftstate
+  return rs.maxraftstate != -1 && rs.persister.RaftStateSize() >= rs.maxraftstate
 }
 
 func (rs *RaftServer) snapshotLoop() {
@@ -62,11 +60,11 @@ type SnapshotEvent struct {
 }
 
 func (e *SnapshotEvent) Run(rs *RaftServer) {
+  DPrintf("%v request snapshot", rs.me)
   snapshot,index:=rs.generateSnapshot()
+  rs.snapshotFinish = e.done
   go func() {
-    if rs.rf.Snapshot(index,snapshot) {
-      rs.snapshotFinish = e.done
-    } else {
+    if !rs.rf.Snapshot(index,snapshot) {
       e.done()
     }
   }()

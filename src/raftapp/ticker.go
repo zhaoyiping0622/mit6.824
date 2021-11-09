@@ -52,6 +52,7 @@ func (e *StatusChangeEvent) Run(rs *RaftServer) {
   }
   rs.term = e.term
   if e.isLeader {
+    DPrintf("%v change to leader", rs.me)
     rs.leaderCtx, rs.leaderCancel=context.WithCancel(rs.background)
   }
 }

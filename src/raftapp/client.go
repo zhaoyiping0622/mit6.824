@@ -23,22 +23,20 @@ type RaftClient struct {
 }
 
 func (cli *RaftClient) Send(command Command) (bool, interface{}) {
+  DPrintf("client %v get command %T%+v", cli.sessionId, command, command)
   leader:=cli.lastLeader
-  if cli.sessionId == 0 {
-    cli.sessionId = nrand()
-  }
   cli.seqNum++
   defer func() { cli.lastLeader = leader }()
+  args:=CommandArgs{
+    SessionId: cli.sessionId,
+    SeqNum: cli.seqNum,
+    Command: command,
+  }
   for {
     if leader == len(cli.servers) {
       leader = 0
     }
     var reply CommandReply
-    args:=CommandArgs{
-      SessionId: cli.sessionId,
-      SeqNum: cli.seqNum,
-      Command: command,
-    }
     ok := cli.servers[leader].Call(cli.name+".CommandRequest", &args, &reply)
     if ok {
       switch reply.Err {
@@ -54,8 +52,11 @@ func (cli *RaftClient) Send(command Command) (bool, interface{}) {
 }
 
 func MakeRaftClient(servers []*labrpc.ClientEnd, name string) *RaftClient {
-  return &RaftClient{
+  cli := &RaftClient{
     servers: servers,
     name: name,
+    sessionId: nrand(),
   }
+  DPrintf("client %p sessionId %v", cli, cli.sessionId )
+  return cli
 }
