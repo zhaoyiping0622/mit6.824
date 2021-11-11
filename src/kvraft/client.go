@@ -9,7 +9,7 @@ import (
 )
 
 type Clerk struct {
-  *raftapp.SingleRaftClient
+  *raftapp.RaftClient
 }
 
 func nrand() int64 {

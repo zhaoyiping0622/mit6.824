@@ -15,7 +15,7 @@ func nrand() int64 {
 	return x
 }
 
-type SingleRaftClient struct {
+type RaftClient struct {
   servers []*labrpc.ClientEnd
   sessionId int64
   seqNum int
@@ -23,15 +23,20 @@ type SingleRaftClient struct {
   name string
 }
 
-func (cli *SingleRaftClient) Send(command interface{}) (bool, interface{}) {
+func (cli *RaftClient) Send(command interface{}) (bool, interface{}) {
+  return cli.SendWithShard(command, 0)
+}
+
+func (cli *RaftClient) SendWithShard(command interface{}, shard int) (bool, interface{}) {
   DPrintf("client %v get command %T%+v", cli.sessionId, command, command)
   leader:=cli.lastLeader
   cli.seqNum++
   defer func() { cli.lastLeader = leader }()
   args:=&CommandRequestArgs{
-    MetaData: &SingleCommandRequestMetadata{
+    MetaData: CommandRequestMetadata{
       SessionId: cli.sessionId,
       SeqNum: cli.seqNum,
+      Shard: shard,
     },
     Command: command,
   }
@@ -55,8 +60,8 @@ func (cli *SingleRaftClient) Send(command interface{}) (bool, interface{}) {
   }
 }
 
-func MakeSingleRaftClient(servers []*labrpc.ClientEnd, name string) *SingleRaftClient {
-  cli := &SingleRaftClient{
+func MakeSingleRaftClient(servers []*labrpc.ClientEnd, name string) *RaftClient {
+  cli := &RaftClient{
     servers: servers,
     name: name,
     sessionId: nrand(),

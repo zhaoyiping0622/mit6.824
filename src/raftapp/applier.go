@@ -20,7 +20,7 @@ type Applier interface {
 }
 
 type Op struct {
-  Metadata interface{}
+  Metadata CommandRequestMetadata
   Command interface{}
 }
 

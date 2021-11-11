@@ -28,7 +28,7 @@ type SingleApplier struct {
 }
 
 func (sa *SingleApplier) CommandRequest(args *CommandRequestArgs,reply *CommandRequestReply)  {
-  metadata:=getSingleCommandRequestMetatadata(args.MetaData)
+  metadata:=args.MetaData
   ch:=sa.trigger.GetValue(metadata.SessionId, metadata.SeqNum)
   var value interface{}
   var ok bool
@@ -67,7 +67,7 @@ func (sa *SingleApplier) applyCommand(msg raft.ApplyMsg) {
   }
   sa.lastApplied++
   op:=msg.Command.(*Op)
-  metadata:=getSingleCommandRequestMetatadata(op.Metadata)
+  metadata:=op.Metadata
   if !sa.trigger.HasValue(metadata.SessionId, metadata.SeqNum) {
     result:=sa.app.ApplyCommand(op.Command)
     sa.trigger.UpdateSession(metadata.SessionId, &Session{
