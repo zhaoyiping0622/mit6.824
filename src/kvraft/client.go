@@ -9,7 +9,7 @@ import (
 )
 
 type Clerk struct {
-  *raftapp.RaftClient
+  *raftapp.SingleRaftClient
 }
 
 func nrand() int64 {
@@ -21,7 +21,7 @@ func nrand() int64 {
 
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
   return &Clerk{
-    raftapp.MakeRaftClient(servers, "KVServer"),
+    raftapp.MakeSingleRaftClient(servers, "KVServer"),
   }
 }
 

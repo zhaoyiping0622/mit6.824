@@ -20,8 +20,8 @@ for loop in `seq 1 $1`
 do
   echo test round $loop
   out=testout/out$loop
-  echo "SLOW=1 debug=raftapp,kvraft PORT=6063 go test -failfast $packages > $out"
-  SLOW=1 debug=raftapp,kvraft PORT=6063 go test -failfast $packages > $out
+  echo "SLOW=1 debug=raftapp,kvraft PORT=6063 go test -v -failfast $packages > $out"
+  debug=raftapp,kvraft PORT=6063 go test -v -failfast $packages > $out
   if [ $? -ne 0 ] 
   then 
     echo test failed output in $out

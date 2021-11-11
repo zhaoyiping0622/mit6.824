@@ -3,56 +3,71 @@ package raftapp
 import (
 	"context"
 	"time"
+
+	"6.824/raft"
 )
 
-func (rs *RaftServer) statusTicker() {
+type Ticker interface {
+  Run(ctx context.Context)
+}
+
+type StatusTicker struct {
+  rf *raft.Raft
+  applier Applier
+  term int
+  me int
+}
+
+func MakeStatusTicker(rf *raft.Raft, applier Applier, me int) *StatusTicker {
+  return &StatusTicker{
+    rf: rf,
+    applier: applier,
+    me: me,
+  }
+}
+
+func (st *StatusTicker)Run(ctx context.Context) {
   for {
     select {
-    case <-rs.background.Done():return
-    case <-time.After(StatusTickerInterval):
+    case <-ctx.Done():return
+    case <-time.After(10*time.Millisecond):
     }
-    wasLeader:=(rs.leaderCtx!=nil)
-    term,isLeader:=rs.rf.GetState()
-    if isLeader != wasLeader || term != rs.term {
-      ctx,cancel:=context.WithCancel(rs.background)
-      go rs.sendEvent(&StatusChangeEvent{
-        isLeader: isLeader,
-        term: term,
-        done: cancel,
-      })
-      <-ctx.Done()
+    term,isLeader:=st.rf.GetState()
+    if term != st.term {
+      if isLeader {
+        DPrintf("%v change to leader", st.me)
+      }
+      st.term = term
+      st.applier.UpdateTerm(term)
     }
   }
 }
 
-type StatusChangeEvent struct {
-  isLeader bool
-  term int
-  done context.CancelFunc
+type SnapshotTicker struct {
+  persister *raft.Persister
+  applier Applier
+  limit int
 }
 
-func (e *StatusChangeEvent) Run(rs *RaftServer) {
-  if e.done != nil {
-    defer e.done()
+func MakeSnapshotTicker(persister *raft.Persister, applier Applier, limit int) *SnapshotTicker {
+  return &SnapshotTicker{
+    persister: persister,
+    applier: applier,
+    limit: limit,
   }
-  wasLeader:=(rs.leaderCtx!=nil)
-  if wasLeader == e.isLeader && rs.term == e.term {
+}
+
+func (st *SnapshotTicker) Run(ctx context.Context) {
+  if st.limit == -1 {
     return
   }
-  if wasLeader {
-    rs.leaderCancel()
-    rs.leaderCtx = nil
-  }
-  for sessionId,trigger:=range rs.triggers {
-    if trigger.term < e.term {
-      trigger.result.Err = ErrWrongLeader
-      trigger.done()
-      delete(rs.triggers, sessionId)
+  for {
+    select {
+    case <-ctx.Done():return
+    case <-time.After(10*time.Millisecond):
     }
-  }
-  rs.term = e.term
-  if e.isLeader {
-    DPrintf("%v change to leader", rs.me)
-    rs.leaderCtx, rs.leaderCancel=context.WithCancel(rs.background)
+    if st.persister.RaftStateSize() >= st.limit {
+      st.applier.Snapshot(ctx)
+    }
   }
 }

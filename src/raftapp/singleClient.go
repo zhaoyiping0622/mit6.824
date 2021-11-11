@@ -3,6 +3,7 @@ package raftapp
 import (
 	"crypto/rand"
 	"math/big"
+	"time"
 
 	"6.824/labrpc"
 )
@@ -14,7 +15,7 @@ func nrand() int64 {
 	return x
 }
 
-type RaftClient struct {
+type SingleRaftClient struct {
   servers []*labrpc.ClientEnd
   sessionId int64
   seqNum int
@@ -22,22 +23,24 @@ type RaftClient struct {
   name string
 }
 
-func (cli *RaftClient) Send(command Command) (bool, interface{}) {
+func (cli *SingleRaftClient) Send(command interface{}) (bool, interface{}) {
   DPrintf("client %v get command %T%+v", cli.sessionId, command, command)
   leader:=cli.lastLeader
   cli.seqNum++
   defer func() { cli.lastLeader = leader }()
-  args:=CommandArgs{
-    SessionId: cli.sessionId,
-    SeqNum: cli.seqNum,
+  args:=&CommandRequestArgs{
+    MetaData: &SingleCommandRequestMetadata{
+      SessionId: cli.sessionId,
+      SeqNum: cli.seqNum,
+    },
     Command: command,
   }
   for {
     if leader == len(cli.servers) {
       leader = 0
     }
-    var reply CommandReply
-    ok := cli.servers[leader].Call(cli.name+".CommandRequest", &args, &reply)
+    var reply CommandRequestReply
+    ok := cli.servers[leader].Call(cli.name+".CommandRequest", args, &reply)
     if ok {
       switch reply.Err {
       case OK: return true,reply.Result
@@ -48,11 +51,12 @@ func (cli *RaftClient) Send(command Command) (bool, interface{}) {
     } else {
       leader++
     }
+    time.Sleep(10*time.Millisecond)
   }
 }
 
-func MakeRaftClient(servers []*labrpc.ClientEnd, name string) *RaftClient {
-  cli := &RaftClient{
+func MakeSingleRaftClient(servers []*labrpc.ClientEnd, name string) *SingleRaftClient {
+  cli := &SingleRaftClient{
     servers: servers,
     name: name,
     sessionId: nrand(),
