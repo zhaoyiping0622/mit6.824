@@ -21,7 +21,7 @@ func nrand() int64 {
 
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
   return &Clerk{
-    raftapp.MakeRaftClient(servers, "KVServer"),
+    raftapp.MakeSingleRaftClient(servers, "KVServer"),
   }
 }
 
