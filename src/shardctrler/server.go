@@ -9,7 +9,7 @@ import (
 
 type ShardCtrler struct {
   rf *raft.Raft
-  *raftapp.RaftServer
+  *raftapp.SingleServer
 }
 
 // needed by shardkv tester
@@ -25,7 +25,7 @@ func (sc *ShardCtrler) Raft() *raft.Raft {
 //
 func StartServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister) *ShardCtrler {
   sc:=new(ShardCtrler)
-  sc.RaftServer = raftapp.MakeRaftServer(servers, me, persister, -1, MakeController(me))
+  sc.SingleServer = raftapp.MakeSingleServer(servers, me, persister, -1, MakeController(me))
   sc.rf = sc.GetRaft()
   return sc
 }

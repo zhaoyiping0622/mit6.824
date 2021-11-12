@@ -1,6 +1,10 @@
 package shardctrler
 
-import "6.824/raftapp"
+import (
+	"fmt"
+
+	"6.824/raftapp"
+)
 
 type Controller struct {
   Configs []Config
@@ -43,8 +47,42 @@ func (ct *Controller) ApplySnapshot(interface{}) {
   panic("controller do not support snapshot")
 }
 
-func (ct *Controller) CreateSnapshot() interface{} {
+func (ct *Controller) GenerateSnapshot() interface{} {
   panic("controller do not support snapshot")
+}
+
+func (ct *Controller) ApplyCommand(command interface{}) interface{} {
+  switch command:=command.(type) {
+  case *Join:
+    ne:=ct.getNewConfig()
+    for k,v:=range command.Servers {
+      if vv,ok:=ne.Groups[k];ok {
+        ne.Groups[k] = append(vv, v...)
+      } else {
+        ne.Groups[k] = v
+      }
+    }
+    ne.balance()
+    return nil
+  case *Leave:
+    ne:=ct.getNewConfig()
+    for i:=range command.GIDs {
+      delete(ne.Groups, command.GIDs[i])
+    }
+    ne.balance()
+    return nil
+  case *Move:
+    ne:=ct.getNewConfig()
+    ne.Shards[command.Shard]=command.GID
+    return nil
+  case *Query:
+    if command.Num < 0 || command.Num >= len(ct.Configs) {
+      command.Num = len(ct.Configs) - 1
+    }
+    return *ct.getConfig(command.Num)
+  default:
+    panic(fmt.Sprintf("unknown command %T%+v",command,command))
+  }
 }
 
 func getController(i raftapp.RaftApp) *Controller {

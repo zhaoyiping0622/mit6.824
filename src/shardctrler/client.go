@@ -15,7 +15,7 @@ type Clerk struct {
 
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
-  ck.RaftClient = raftapp.MakeRaftClient(servers, "ShardCtrler")
+  ck.RaftClient = raftapp.MakeSingleRaftClient(servers, "ShardCtrler")
 	return ck
 }
 
