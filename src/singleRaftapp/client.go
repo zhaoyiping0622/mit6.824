@@ -1,4 +1,4 @@
-package raftapp
+package singleRaftapp
 
 import (
 	"crypto/rand"
@@ -21,10 +21,6 @@ type RaftClient struct {
   seqNum int
   lastLeader int
   name string
-}
-
-func (cli *RaftClient) Send(command interface{}) (bool, interface{}) {
-  return cli.SendWithShard(command, 0)
 }
 
 func (cli *RaftClient) SendWithShard(command interface{}, shard int) (bool, interface{}) {
@@ -60,12 +56,22 @@ func (cli *RaftClient) SendWithShard(command interface{}, shard int) (bool, inte
   }
 }
 
-func MakeSingleRaftClient(servers []*labrpc.ClientEnd, name string) *RaftClient {
+type SingleRaftClient struct {
+  *RaftClient
+}
+
+func (cli *SingleRaftClient) Send(command interface{}) (bool, interface{}) {
+  return cli.SendWithShard(command, 0)
+}
+
+func MakeSingleRaftClient(servers []*labrpc.ClientEnd, name string) *SingleRaftClient {
   cli := &RaftClient{
     servers: servers,
     name: name,
     sessionId: nrand(),
   }
   DPrintf("client %p sessionId %v", cli, cli.sessionId )
-  return cli
+  return &SingleRaftClient{
+    RaftClient:cli,
+  }
 }

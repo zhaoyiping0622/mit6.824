@@ -1,4 +1,4 @@
-package raftapp
+package singleRaftapp
 
 import (
 	"log"
@@ -10,7 +10,7 @@ var debug bool
 
 func init() {
   for _,s:=range strings.Split(os.Getenv("debug"), ",") {
-    if s == "raftapp" {
+    if s == "singleRaftapp" {
       debug=true
       return
     }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"6.824/labgob"
-	"6.824/raftapp"
+	"6.824/singleRaftapp"
 )
 
 func init() {
@@ -56,6 +56,6 @@ func MakeKVStore() *KVStore {
   }
 }
 
-func getKVStore(i raftapp.RaftApp) *KVStore {
+func getKVStore(i singleRaftapp.RaftApp) *KVStore {
   return i.(*KVStore)
 }

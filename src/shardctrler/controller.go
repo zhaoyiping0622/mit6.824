@@ -3,7 +3,7 @@ package shardctrler
 import (
 	"fmt"
 
-	"6.824/raftapp"
+	"6.824/singleRaftapp"
 )
 
 type Controller struct {
@@ -85,6 +85,6 @@ func (ct *Controller) ApplyCommand(command interface{}) interface{} {
   }
 }
 
-func getController(i raftapp.RaftApp) *Controller {
+func getController(i singleRaftapp.RaftApp) *Controller {
   return i.(*Controller)
 }

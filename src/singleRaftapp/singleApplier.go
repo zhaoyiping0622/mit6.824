@@ -1,4 +1,4 @@
-package raftapp
+package singleRaftapp
 
 import (
 	"bytes"

@@ -5,11 +5,11 @@ import (
 	"math/big"
 
 	"6.824/labrpc"
-	"6.824/raftapp"
+	"6.824/singleRaftapp"
 )
 
 type Clerk struct {
-  *raftapp.RaftClient
+  *singleRaftapp.SingleRaftClient
 }
 
 func nrand() int64 {
@@ -21,7 +21,7 @@ func nrand() int64 {
 
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
   return &Clerk{
-    raftapp.MakeSingleRaftClient(servers, "KVServer"),
+    singleRaftapp.MakeSingleRaftClient(servers, "KVServer"),
   }
 }
 

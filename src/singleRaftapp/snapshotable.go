@@ -1,4 +1,4 @@
-package raftapp
+package singleRaftapp
 
 type Snapshotable interface {
   GenerateSnapshot() interface{}

@@ -6,16 +6,16 @@ package shardctrler
 
 import (
 	"6.824/labrpc"
-	"6.824/raftapp"
+	"6.824/singleRaftapp"
 )
 
 type Clerk struct {
-  *raftapp.RaftClient
+  *singleRaftapp.SingleRaftClient
 }
 
 func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
-  ck.RaftClient = raftapp.MakeSingleRaftClient(servers, "ShardCtrler")
+  ck.SingleRaftClient = singleRaftapp.MakeSingleRaftClient(servers, "ShardCtrler")
 	return ck
 }
 

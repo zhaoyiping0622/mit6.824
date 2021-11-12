@@ -5,12 +5,12 @@ import (
 
 	"6.824/labrpc"
 	"6.824/raft"
-	"6.824/raftapp"
+	"6.824/singleRaftapp"
 )
 
 type KVServer struct {
   rf *raft.Raft
-  *raftapp.SingleServer
+  *singleRaftapp.SingleServer
 }
 
 type KillEvent struct {
@@ -31,7 +31,7 @@ type KillEvent struct {
 //
 func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister, maxraftstate int) *KVServer {
   kv:=new(KVServer)
-  kv.SingleServer = raftapp.MakeSingleServer(servers, me, persister, maxraftstate, MakeKVStore())
+  kv.SingleServer = singleRaftapp.MakeSingleServer(servers, me, persister, maxraftstate, MakeKVStore())
   kv.rf=kv.GetRaft()
 
 	return kv
