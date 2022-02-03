@@ -16,7 +16,7 @@ type Executor interface {
 
 type InnerExecutor interface {
 	Snapshotable
-	Run(interface{}) *AsyncRequestReply
+	Run(interface{}) interface{}
 }
 
 type ExecutorImpl struct {
@@ -41,7 +41,10 @@ func (e *ExecutorImpl) SetNotice(n NoticeProducer) {
 func (e *ExecutorImpl) RunCommand(r *AsyncRequestArgs) {
 	for _, x := range r.Location.GetExecutorIds() {
 		if x == e.ExecutorId {
-			res := e.InnerExecutor.Run(r.Command)
+      res := &AsyncRequestReply{
+        Err: Ok,
+        Result: e.InnerExecutor.Run(r.Command),
+      }
 			e.Notice.SetValue(r.Location, r.SeqNum, res)
 		}
 	}

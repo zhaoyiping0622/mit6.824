@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"6.824/labgob"
-	"6.824/raftapp"
 )
 
 func init() {
@@ -32,17 +31,15 @@ type kvStore struct {
 	m map[string]string
 }
 
-func (k *kvStore) Run(c interface{}) *raftapp.AsyncRequestReply {
-	ret := new(raftapp.AsyncRequestReply)
-	ret.Err = raftapp.Ok
+func (k *kvStore) Run(c interface{}) interface{} {
 	switch cc := c.(type) {
 	case *GET:
 		{
 			kk := cc.Key
 			if v, ok := k.m[kk]; ok {
-				ret.Result = v
+        return v
 			} else {
-				ret.Result = ""
+        return ""
 			}
 		}
 	case *PUT:
@@ -59,7 +56,7 @@ func (k *kvStore) Run(c interface{}) *raftapp.AsyncRequestReply {
 	default:
 		panic(fmt.Sprintf("unknown command %+v", c))
 	}
-	return ret
+	return nil
 }
 
 func (k *kvStore) GenerateSnapshot() interface{} {
