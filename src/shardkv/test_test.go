@@ -1,15 +1,26 @@
 package shardkv
 
-import "6.824/porcupine"
-import "6.824/models"
-import "testing"
-import "strconv"
-import "time"
-import "fmt"
-import "sync/atomic"
-import "sync"
-import "math/rand"
-import "io/ioutil"
+import (
+	"context"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"math/rand"
+	"net/http"
+	"os"
+	"runtime"
+	"runtime/pprof"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	_ "net/http/pprof"
+
+	"6.824/models"
+	"6.824/porcupine"
+)
 
 const linearizabilityCheckTimeout = 1 * time.Second
 
@@ -736,6 +747,7 @@ func TestUnreliable3(t *testing.T) {
 // shards for which they are no longer responsible.
 //
 func TestChallenge1Delete(t *testing.T) {
+  // t.SkipNow()
 	fmt.Printf("Test: shard deletion (challenge 1) ...\n")
 
 	// "1" means force snapshot after every log entry.
@@ -809,6 +821,8 @@ func TestChallenge1Delete(t *testing.T) {
 		t.Fatalf("snapshot + persisted Raft state are too big: %v > %v\n", total, expected)
 	}
 
+  log.Printf("total %v expected %v", total, expected)
+
 	for i := 0; i < n; i++ {
 		check(t, ck, ka[i], va[i])
 	}
@@ -822,6 +836,7 @@ func TestChallenge1Delete(t *testing.T) {
 // while the config change is underway
 //
 func TestChallenge2Unaffected(t *testing.T) {
+  t.SkipNow()
 	fmt.Printf("Test: unaffected shard access (challenge 2) ...\n")
 
 	cfg := make_config(t, 3, true, 100)
@@ -945,4 +960,43 @@ func TestChallenge2Partial(t *testing.T) {
 	}
 
 	fmt.Printf("  ... Passed\n")
+}
+
+func TestMain(m *testing.M) {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "6060"
+	}
+	go func() {
+		log.Println(http.ListenAndServe("0.0.0.0:"+port, nil))
+	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func(ctx context.Context) {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			if runtime.NumGoroutine() > 6000 {
+				ctx, cancel := context.WithCancel(context.Background())
+				go func() {
+					f, err := os.Create("goroutines")
+					if err != nil {
+						f = os.Stdout
+					} else {
+						defer f.Close()
+					}
+					pprof.Lookup("goroutine").WriteTo(f, 2)
+					cancel()
+				}()
+				<-ctx.Done()
+			}
+		}
+	}(ctx)
+	code := m.Run()
+	cancel()
+	os.Exit(code)
 }

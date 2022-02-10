@@ -2,20 +2,31 @@ package shardctrler
 
 import (
 	"fmt"
+	"sort"
 
 	"6.824/raftapp"
 )
 
 type Controller struct {
   Configs []Config
-  me int
+  Me int
+  ShardInfos [NShards]ShardInfo
+  Version int
+  Groups map[int][]string
 }
 
 func MakeController(me int) *Controller {
   rt:=new(Controller)
-  rt.me=me
+  rt.Me=me
+  rt.Groups=make(map[int][]string)
   rt.Configs=make([]Config, 1)
   rt.Configs[0].Groups=make(map[int][]string)
+  for i:=0;i<NShards;i++ {
+    rt.ShardInfos[i]=ShardInfo{
+      Owner: -1,
+      Version: 0,
+    }
+  }
   return rt
 }
 
@@ -44,23 +55,69 @@ func (ct *Controller) getNewConfig() *Config {
   return &ct.Configs[len(ct.Configs)-1]
 }
 
-func (ct *Controller) ApplySnapshot(interface{}) {
-  panic("controller do not support snapshot")
+type ControllerSnapshot struct {
+  Configs []Config
+  ShardInfo [NShards]ShardInfo
+  Version int
 }
 
-func (ct *Controller) GenerateSnapshot() interface{} {
-  panic("controller do not support snapshot")
+func (ct *Controller) ApplySnapshot(i raftapp.Snapshot) {
+  // if i != nil {
+  //   x:=i.(*ControllerSnapshot)
+  //   ct.Configs=make([]Config, len(x.Configs))
+  //   for i:=range x.Configs {
+  //     ct.Configs[i]=x.Configs[i]
+  //   }
+  //   ct.ShardInfos=x.ShardInfo
+  //   ct.Version=x.Version
+  // }
+}
+
+func (ct *Controller) GenerateSnapshot() raftapp.Snapshot {
+  panic("impossible")
+  // x:=new(ControllerSnapshot)
+  // x.Configs=make([]Config, len(ct.Configs))
+  // for i:=range ct.Configs {
+  //   x.Configs[i]=*ct.getConfig(i)
+  // }
+  // x.ShardInfo=ct.ShardInfos
+  // x.Version=ct.Version
+  // return x
+}
+
+func(ct *Controller) Clean() {}
+
+func (ct *Controller) getInfoResult() *InfoResult {
+  groups:=make(map[int][]string)
+  for k,v:=range ct.Groups {
+    groups[k]=make([]string, 0)
+    groups[k]=append(groups[k], v...)
+  }
+  return &InfoResult{
+    Groups: groups,
+    Version: ct.Version,
+    Config: ct.getLastConfig(),
+    ShardInfos: ct.ShardInfos,
+  }
 }
 
 func (ct *Controller) Run(command interface{}) interface{} {
+  l:=len(ct.Configs)
+  version:=ct.Version
+  defer func() {
+    if len(ct.Configs)!=l || version != ct.Version {
+      DPrintf("just run %T%+v info result %v", command, command, raftapp.PrettyPrint(ct.getInfoResult()))
+    }
+  }()
   switch command:=command.(type) {
   case *Join:
     ne:=ct.getNewConfig()
     for k,v:=range command.Servers {
-      if vv,ok:=ne.Groups[k];ok {
-        ne.Groups[k] = append(vv, v...)
+      sort.Strings(v)
+      ne.Groups[k] = v
+      if vv,ok:=ct.Groups[k]; ok && EqualStringSlice(vv,v) {
       } else {
-        ne.Groups[k] = v
+        ct.Groups[k]=v
       }
     }
     ne.balance()
@@ -81,6 +138,29 @@ func (ct *Controller) Run(command interface{}) interface{} {
       num = command.Num
     }
     return ct.getConfig(num)
+  case *Info:
+    return ct.getInfoResult()
+  case *UpdateOwner:
+    config:=ct.getLastConfig()
+    shard:=command.Shard
+    info:=command.Infos
+    // DPrintf("get %T%+v info %v currentInfo %+v", command, command, command.Infos, *ct.getInfoResult())
+      if config.Shards[shard] != info.Owner || info.Version != ct.ShardInfos[shard].Version + 1 {
+        // in this config the owner of the shard is not this one
+        // or
+        // the version is not greater than the controller's version
+        return &UpdateOwnerResult{
+          Success: false,
+          InfoResult: ct.getInfoResult(),
+        }
+      } else {
+        ct.ShardInfos[shard]=*info
+        ct.Version++
+        return &UpdateOwnerResult{
+          Success: true,
+          InfoResult: ct.getInfoResult(),
+        }
+      }
   default:
     panic(fmt.Sprintf("unknown command %T%+v",command,command))
   }

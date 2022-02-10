@@ -123,24 +123,33 @@ func (s *SingleNotice) UpdateTermAndLeader(term int, isLeader bool) {
 }
 
 
-func (s *SingleNotice) GenerateSnapshot() interface{} {
+func (s *SingleNotice) GenerateSnapshot() raftapp.Snapshot {
   s.mu.Lock()
   defer s.mu.Unlock()
   ret:=make(map[int64]*Session)
   for sessionId,session:=range s.sessions {
-    s:=Session{}
-    s=*session
-    ret[sessionId]=&s
+    s:=new(Session)
+    s.SeqNum=session.SeqNum
+    s.Value=session.Value
+    ret[sessionId]=s
   }
-  return ret
+  return raftapp.ValueToSnapshot(ret)
 }
 
-func (s *SingleNotice) ApplySnapshot(snapshot interface{}) {
+func (s *SingleNotice) ApplySnapshot(snapshot raftapp.Snapshot) {
+  if snapshot != nil {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    s.removeAllQueue()
+    s.term=0
+    raftapp.SnapshotToValue(snapshot, &s.sessions)
+  }
+}
+
+func (s *SingleNotice) Clean() {
   s.mu.Lock()
   defer s.mu.Unlock()
   s.removeAllQueue()
-  s.term=0
-  s.sessions=snapshot.(map[int64]*Session)
 }
 
 func MakeSingleNotice() raftapp.Notice {

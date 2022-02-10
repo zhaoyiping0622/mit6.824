@@ -10,8 +10,9 @@ type SingleRaftClient struct {
   *raftapp.RaftClient
 }
 
-func (cli *SingleRaftClient) Send(command interface{}) (bool, interface{}) {
-  return cli.SendWithShard(command, 0, cli.location)
+func (cli *SingleRaftClient) Send(command interface{}) interface{} {
+  _,ret:=cli.SendWithShard(command, cli.location, true)
+  return ret
 }
 
 func MakeSingleRaftClient(servers []*labrpc.ClientEnd, name string) *SingleRaftClient {

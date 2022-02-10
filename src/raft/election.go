@@ -58,10 +58,10 @@ func (e *RequestVoteEvent) Run(rf *Raft) {
 	}
 	go func() {
 		var reply RequestVoteReply
-		DPrintf("%v sendRequestVote to %v args %+v", rf.me, e.idx, args)
+		DPrintf("%v sendRequestVote to %v args %+v", rf.id, e.idx, args)
 		if rf.sendRequestVote(e.idx, &args, &reply) {
 			go rf.sendEvent(&ProcessRequestVoteRespondEvent{e.idx, &args, &reply})
-			DPrintf("%v sendRequestVote to %v args %+v reply %+v", rf.me, e.idx, args, reply)
+			DPrintf("%v sendRequestVote to %v args %+v reply %+v", rf.id, e.idx, args, reply)
 		}
 	}()
 }

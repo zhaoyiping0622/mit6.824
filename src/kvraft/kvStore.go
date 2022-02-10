@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"6.824/labgob"
+	"6.824/raftapp"
 )
 
 func init() {
@@ -59,12 +60,17 @@ func (k *kvStore) Run(c interface{}) interface{} {
 	return nil
 }
 
-func (k *kvStore) GenerateSnapshot() interface{} {
-	return k.m
+func (k *kvStore) GenerateSnapshot() raftapp.Snapshot {
+  snapshot:=raftapp.ValueToSnapshot(k.m)
+  return snapshot
 }
 
-func (k *kvStore) ApplySnapshot(s interface{}) {
-	k.m = s.(map[string]string)
+func (k *kvStore) ApplySnapshot(s raftapp.Snapshot) {
+  raftapp.SnapshotToValue(s, &k.m)
+}
+
+func (k *kvStore) Clean() {
+  k.m=make(map[string]string)
 }
 
 func MakeKvStore() *kvStore {

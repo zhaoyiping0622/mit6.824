@@ -8,37 +8,45 @@ func init() {
 	labgob.Register(&ExecutorImplSnapshot{})
 }
 
-type Executor interface {
-	Snapshotable
+const (
+  ExecutorIdApp int64 = iota + 1
+  ExecutorIdShard
+  ExecutorIdInit
+)
+
+type Executable interface {
 	RunCommand(*AsyncRequestArgs)
-	SetExecutorId(int64)
+}
+
+type Executor interface {
+	CleanSnapshotable
+  Executable
 }
 
 type InnerExecutor interface {
-	Snapshotable
+	CleanSnapshotable
 	Run(interface{}) interface{}
 }
 
 type ExecutorImpl struct {
 	InnerExecutor InnerExecutor
 	ExecutorId    int64
-	Notice        NoticeProducer
+	Notice        Notice
 }
 
 type ExecutorImplSnapshot struct {
-	Inner      interface{}
+	Inner      Snapshot
 	ExecutorId int64
 }
 
-func (e *ExecutorImpl) SetExecutorId(id int64) {
-	e.ExecutorId = id
-}
-
-func (e *ExecutorImpl) SetNotice(n NoticeProducer) {
+func (e *ExecutorImpl) SetNotice(n Notice) {
 	e.Notice = n
 }
 
 func (e *ExecutorImpl) RunCommand(r *AsyncRequestArgs) {
+  if e.Notice.HasValue(r.Location, r.SeqNum) {
+    return
+  }
 	for _, x := range r.Location.GetExecutorIds() {
 		if x == e.ExecutorId {
       res := &AsyncRequestReply{
@@ -50,14 +58,59 @@ func (e *ExecutorImpl) RunCommand(r *AsyncRequestArgs) {
 	}
 }
 
-func (e *ExecutorImpl) GenerateSnapshot() interface{} {
-	s := &ExecutorImplSnapshot{ExecutorId: e.ExecutorId}
-	s.Inner = e.InnerExecutor.GenerateSnapshot()
-	return s
+func (e *ExecutorImpl) GenerateSnapshot() Snapshot {
+	s := ExecutorImplSnapshot{
+    ExecutorId: e.ExecutorId,
+    Inner: e.InnerExecutor.GenerateSnapshot(),
+  }
+	return ValueToSnapshot(s)
 }
 
-func (e *ExecutorImpl) ApplySnapshot(s interface{}) {
-	ss := s.(*ExecutorImplSnapshot)
-	e.ExecutorId = ss.ExecutorId
-	e.InnerExecutor.ApplySnapshot(ss.Inner)
+func (e *ExecutorImpl) ApplySnapshot(s Snapshot) {
+  if s != nil {
+    x:=ExecutorImplSnapshot{}
+    SnapshotToValue(s, &x)
+    e.ExecutorId = x.ExecutorId
+    e.InnerExecutor.ApplySnapshot(x.Inner)
+  }
+}
+
+func (e *ExecutorImpl) Clean() {
+  e.InnerExecutor.Clean()
+}
+
+func MakeExecutor(innerExecutor InnerExecutor, notice Notice, executorId int64) Executor {
+  return &ExecutorImpl{
+    InnerExecutor: innerExecutor,
+    Notice: notice,
+    ExecutorId: executorId,
+  }
+}
+
+type TmpExecutor struct {
+  f func(r *AsyncRequestArgs)
+}
+
+func (e *TmpExecutor) RunCommand(r *AsyncRequestArgs) { e.f(r) }
+
+func (e *TmpExecutor) GenerateSnapshot() Snapshot { return nil }
+
+func (e *TmpExecutor) ApplySnapshot(Snapshot) {}
+
+func (e *TmpExecutor) Clean() {}
+
+func MakeTmpExecutor(f func(r *AsyncRequestArgs)) Executor { return &TmpExecutor{ f: f } }
+
+func MakeWrongGroupExecutor() Executor { return MakeTmpExecutor(func(r *AsyncRequestArgs) {}) }
+
+func MakeInitExecutor(c *RaftControllerImpl, n Notice) Executor {
+  return MakeTmpExecutor(func(r *AsyncRequestArgs) {
+    for _,x:=range r.Location.GetExecutorIds() {
+      if x == ExecutorIdInit{
+        c.SetInited(true)
+        DPrintf("%v inited", c.me)
+        n.SetValue(r.Location, r.SeqNum, nil)
+      }
+    }
+  })
 }

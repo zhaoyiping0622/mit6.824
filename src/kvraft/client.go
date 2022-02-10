@@ -16,10 +16,9 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 }
 
 func (ck *Clerk) Get(key string) string {
-	_, ret := ck.Send(&GET{
+	return ck.Send(&GET{
 		Key: key,
-	})
-	return ret.(string)
+	}).(string)
 }
 
 func (ck *Clerk) Put(key string, value string) {

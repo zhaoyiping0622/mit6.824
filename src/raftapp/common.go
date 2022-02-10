@@ -19,7 +19,7 @@ func init() {
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
 	if debug {
-		log.Printf(format, a...)
+		log.Printf("raftapp "+format, a...)
 	}
 	return
 }

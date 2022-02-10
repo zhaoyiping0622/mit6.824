@@ -1,10 +1,12 @@
 package raftapp
 
+import "math/rand"
+
 type Err int
 
 const (
-	Ok Err = iota
-	WrongLeader
+  WrongLeader	Err = iota
+	Ok
 	WrongGroup
 )
 
@@ -32,7 +34,7 @@ type OutterRpcReply = AsyncRequestReply
 type RpcServer struct {
 	me            int
 	controller    RaftController
-	rpcExecutorId int64
+	rpcExecutorId []int64
 }
 
 func (s *RpcServer) Request(request *OutterRpcArgs, reply *OutterRpcReply) {
@@ -41,17 +43,22 @@ func (s *RpcServer) Request(request *OutterRpcArgs, reply *OutterRpcReply) {
 		Command: request.Command,
 		Location: &ExecutorLocationImpl{
 			NoticeLocation: request.Location,
-			ExecutorIds:    []int64{s.rpcExecutorId},
+			ExecutorIds:    s.rpcExecutorId,
 		},
 	}
-	DPrintf("%v get request %+v", s.me, request)
+  id:=rand.Int31()
+  if s.me >= 1000 {
+    DPrintf("id %v %v get request %+v command %T", id, s.me, PrettyPrint(request), request.Command)
+  }
 	r := s.controller.AsyncRequest(args)
 	reply.Err = r.Err
 	reply.Result = r.Result
-	DPrintf("%v reply %+v", s.me, r.Result)
+  if s.me >= 1000 {
+	  DPrintf("id %v %v get request %+v command %T reply %+v result %+v", id, s.me, PrettyPrint(request), request.Command, r, r.Result)
+  }
 }
 
-func MakeRpcServer(me int, executorId int64, controller RaftController) *RpcServer {
+func MakeRpcServer(me int, executorId []int64, controller RaftController) *RpcServer {
 	return &RpcServer{
 		me:            me,
 		controller:    controller,

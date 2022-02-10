@@ -90,6 +90,8 @@ type Raft struct {
 	snapshotInstalling bool
 	n                  int
 
+  id string
+
 	// Your data here (2A, 2B, 2C).
 	// Look at the paper's Figure 2 for a description of what
 	// state a Raft server must maintain.
@@ -157,12 +159,12 @@ func (rf *Raft) persist(snapshot bool) {
 	if rf.killed() {
 		return
 	}
-	DPrintf("%v begin persist", rf.me)
+	DPrintf("%v begin persist", rf.id)
 	buffer := new(bytes.Buffer)
 	encoder := labgob.NewEncoder(buffer)
 	encoder.Encode(rf.RaftPersistState)
 	data := buffer.Bytes()
-	DPrintf("%v data length %v", rf.me, len(data))
+	DPrintf("%v data length %v", rf.id, len(data))
 	if snapshot {
 		rf.persister.SaveStateAndSnapshot(data, rf.CurrentSnapshot)
 	} else {
@@ -238,7 +240,7 @@ func (e *StartEvent) Run(rf *Raft) {
 			Msg:   e.command,
 		}
 		rf.appendLog([]RaftLog{log})
-		DPrintf("%v get log %+v", rf.me, log)
+		DPrintf("%v get log %+v", rf.id, log)
 		go rf.setQuickSendAll()
 		*e.result = struct {
 			index    int
@@ -270,7 +272,7 @@ func (rf *Raft) Kill() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go rf.sendEvent(&KillEvent{cancel})
 	<-ctx.Done()
-	DPrintf("%v killed", rf.me)
+	DPrintf("%v killed", rf.id)
 }
 
 type KillEvent struct {
@@ -296,9 +298,9 @@ func (rf *Raft) eventloop() {
 			return
 		case event, ok := <-rf.events:
 			if ok && !rf.killed() {
-				// DPrintf("%v run event %T%+v", rf.me, event, event)
+				// DPrintf("%v run event %T%+v", rf.id, event, event)
 				event.Run(rf)
-				// DPrintf("%v run event %T%+v done", rf.me, event, event)
+				// DPrintf("%v run event %T%+v done", rf.id, event, event)
 			}
 		}
 	}
@@ -357,12 +359,12 @@ func (rf *Raft) initPreCandidate() {
 func (rf *Raft) changeStatus(term int, status int) {
 	defer rf.persist(false)
 	if rf.CurrentTerm != term {
-		DPrintf("%v term change from %v to %v", rf.me, rf.CurrentTerm, term)
+		DPrintf("%v term change from %v to %v", rf.id, rf.CurrentTerm, term)
 		rf.CurrentTerm = term
 		rf.VoteFor = rf.n
 		rf.maxProcessId = 0
 	}
-	DPrintf("%v term %v status change from %v to %v", rf.me, rf.CurrentTerm, statusName(rf.status), statusName(status))
+	DPrintf("%v term %v status change from %v to %v", rf.id, rf.CurrentTerm, statusName(rf.status), statusName(status))
 	rf.resetTimer()
 	if rf.status == LEADER {
 		rf.clearLeaderState()
@@ -399,7 +401,7 @@ func (rf *Raft) applyLoop(applyCh chan ApplyMsg) {
 			if ok {
 				select {
 				case applyCh <- msg:
-					DPrintf("%v apply %+v", rf.me, msg)
+					DPrintf("%v apply %+v", rf.id, msg)
 				case <-rf.background.Done():
 					return
 				}
@@ -408,12 +410,16 @@ func (rf *Raft) applyLoop(applyCh chan ApplyMsg) {
 	}
 }
 
-func Make(peers []*labrpc.ClientEnd, me int,
-	persister *Persister, applyCh chan ApplyMsg) *Raft {
+func Make(peers []*labrpc.ClientEnd, me int, persister *Persister, applyCh chan ApplyMsg) *Raft {
+  return MakeRaft(peers, me, persister, applyCh, fmt.Sprint(me))
+}
+
+func MakeRaft(peers []*labrpc.ClientEnd, me int, persister *Persister, applyCh chan ApplyMsg, id string) *Raft {
 	rf := &Raft{}
 	rf.peers = peers
 	rf.persister = persister
 	rf.me = me
+  rf.id = id
 	rf.n = len(rf.peers)
 	rf.events = make(chan Event, EventChanLength)
 	rf.applyCh = make(chan ApplyMsg, ApplyChanLength)
@@ -445,6 +451,6 @@ func Make(peers []*labrpc.ClientEnd, me int,
 			go rf.installSnapshotTicker(i)
 		}
 	}
-	DPrintf("%v pointer %p", rf.me, rf)
+	DPrintf("%v pointer %p", rf.id, rf)
 	return rf
 }

@@ -20,10 +20,9 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 }
 
 func (ck *Clerk) Query(num int) Config {
-  _,ret:=ck.Send(&Query{
+  return *ck.Send(&Query{
     Num: num,
-  })
-  return *ret.(*Config)
+  }).(*Config)
 }
 
 func (ck *Clerk) Join(servers map[int][]string) {
@@ -43,4 +42,15 @@ func (ck *Clerk) Move(shard int, gid int) {
     Shard: shard,
     GID: gid,
   })
+}
+
+func (ck *Clerk) Info() *InfoResult {
+  return ck.Send(&Info{}).(*InfoResult)
+}
+
+func (ck *Clerk) UpdateOwner(Infos *ShardInfo, Shard int) *UpdateOwnerResult {
+  return ck.Send(&UpdateOwner{
+    Infos:Infos,
+    Shard: Shard,
+  }).(*UpdateOwnerResult)
 }

@@ -78,7 +78,7 @@ func (rf *Raft) appendLog(logs []RaftLog) {
 		} else if beginIdx+i == len(rf.Log) {
 			rf.Log = append(rf.Log, logs[i])
 		} else {
-			DPrintf("%v error in appendLog: logs %+v rf.Log %+v", rf.me, LogsOutline(logs), LogsOutline(rf.Log))
+			DPrintf("%v error in appendLog: logs %+v rf.Log %+v", rf.id, LogsOutline(logs), LogsOutline(rf.Log))
 			return
 		}
 	}

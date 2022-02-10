@@ -9,6 +9,13 @@ func init() {
   labgob.Register(&Leave{})
   labgob.Register(&Move{})
   labgob.Register(&Query{})
+  labgob.Register(&Info{})
+  labgob.Register(&InfoResult{})
+  labgob.Register(&ShardInfo{})
+  labgob.Register(&UpdateOwner{})
+  labgob.Register(&UpdateOwnerResult{})
+  labgob.Register(map[int]ShardInfo{})
+  labgob.Register(map[int]bool{})
 }
 
 type Join struct {
@@ -26,4 +33,23 @@ type Move struct {
 
 type Query struct {
   Num int
+}
+
+type Info struct {}
+
+type UpdateOwner struct {
+  Shard int
+  Infos *ShardInfo
+}
+
+type InfoResult struct {
+  Version int
+  Config *Config
+  ShardInfos [NShards]ShardInfo
+  Groups map[int][]string
+}
+
+type UpdateOwnerResult struct {
+  *InfoResult
+  Success bool
 }

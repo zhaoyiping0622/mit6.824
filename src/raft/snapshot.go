@@ -55,15 +55,15 @@ func (e *CondInstallSnapshotEvent) Run(rf *Raft) {
 // that index. Raft should now trim its log as much as possible.
 func (rf *Raft) Snapshot(index int, snapshot Snapshot) bool {
 	// Your code here (2D).
-	DPrintf("%v call snapshot index %v", rf.me, index)
+	DPrintf("%v call snapshot index %v", rf.id, index)
 	ctx, cancel := context.WithCancel(rf.background)
 	var ret bool
 	go rf.sendEvent(&SnapshotEvent{index, snapshot, &ret, cancel})
 	<-ctx.Done()
 	if ret {
-		DPrintf("%v agree to snapshot with index %v", rf.me, index)
+		DPrintf("%v agree to snapshot with index %v", rf.id, index)
 	} else {
-		DPrintf("%v refuse to snapshot with index %v", rf.me, index)
+		DPrintf("%v refuse to snapshot with index %v", rf.id, index)
 	}
 	return ret
 }
@@ -86,7 +86,7 @@ func (e *SnapshotEvent) Run(rf *Raft) {
 	*e.result = true
 	log, err := rf.getLogByIndex(e.index)
 	if err != nil {
-		panic(fmt.Sprintf("%v fail to snapshot with index %v Log %+v err %+v", rf.me, e.index, rf.Log, err))
+		panic(fmt.Sprintf("%v fail to snapshot with index %v Log %+v err %+v", rf.id, e.index, rf.Log, err))
 	}
 	rf.changeSnapshot(log.Index, log.Term, e.snapshot)
 }
@@ -109,7 +109,7 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 	if rf.killed() {
 		return
 	}
-	// DPrintf("%v get Snapshot rpc from %v args %+v", rf.me, args.LeaderId, args)
+	// DPrintf("%v get Snapshot rpc from %v args %+v", rf.id, args.LeaderId, args)
 	ctx, cancel := context.WithCancel(rf.background)
 	go rf.sendEvent(&RespondInstallSnapshotEvent{args, reply, cancel})
 	<-ctx.Done()

@@ -13,7 +13,7 @@ var Debug bool
 
 func init() {
   debug:=os.Getenv("debug")
-  for _,s:=range strings.Split(debug, " ") {
+  for _,s:=range strings.Split(debug, ",") {
      if s == "shardctrler" {
        Debug = true
        break
@@ -58,6 +58,11 @@ type Config struct {
 	Num    int              // config number
 	Shards [NShards]int     // shard -> gid
 	Groups map[int][]string // gid -> servers[]
+}
+
+type ShardInfo struct {
+  Owner int
+  Version int
 }
 
 func (c *Config) balance() {

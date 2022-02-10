@@ -24,47 +24,28 @@ func MakeSingleServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persi
   applyCh:=make(chan raft.ApplyMsg)
   rf:=raft.Make(servers, me, persister, applyCh)
 
-  term,isLeader:=0,false
   tickers:=[]raftapp.Ticker{
-    raftapp.DefaultTicker().SetFunc(func(ctx context.Context) {
-      termA,isLeaderA:=rf.GetState()
-      if termA != term {
-        if isLeaderA {
-          DPrintf("%v change to leader", me)
-        }
-        term=termA
-        isLeader=isLeaderA
-        c.SyncRequest(&raftapp.SyncRequestArgs{
-          Command: &raftapp.TermRequest{
-            Term: term,
-            IsLeader: isLeader,
-        }})
-      }
-    }), // term ticker
-    raftapp.DefaultTicker().SetFunc(func(ctx context.Context) {
-      if maxraftstate == -1 {
-        return
-      }
-      if persister.RaftStateSize() >= maxraftstate {
-        c.SyncRequest(&raftapp.SyncRequestArgs{ Command: &raftapp.SnapshotRequest{ Ctx: ctx } })
-      }
-    }),
+    raftapp.MakeTermTicker(rf, me, c),
+    raftapp.MakeSnapshotTicker(maxraftstate, persister, c),
   }
   notice:=MakeSingleNotice()
-  var executorId int64 =1
+  executorId:=raftapp.ExecutorIdApp
   app := &raftapp.ExecutorImpl{
-      InnerExecutor: executor,
-      Notice: notice,
-      ExecutorId: executorId,
-    }
+    InnerExecutor: executor,
+    Notice: notice,
+    ExecutorId: executorId,
+  }
+
+  ss.background, ss.backgroundCancel = context.WithCancel(context.Background())
 
   // init controller
   c.Init(
+    ss.background,
     me,applyCh,rf,notice,
     []raftapp.TermNotice{
       notice,
     },
-    []raftapp.Executor{
+    []raftapp.Executable{
       app,
     },
     []raftapp.Snapshotable{
@@ -76,12 +57,11 @@ func MakeSingleServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persi
   // init server
   ss.controller=c
   ss.tickers = tickers
-  ss.background, ss.backgroundCancel = context.WithCancel(context.Background())
-  ss.RpcServer=raftapp.MakeRpcServer(me, executorId, c)
+  ss.RpcServer=raftapp.MakeRpcServer(me, []int64{executorId}, c)
   ss.rf=rf
 
   for _,t:=range ss.tickers {
-    go t.Run(ss.background)
+    go t.TickerRun(ss.background)
   }
   go c.Run(ss.background)
 

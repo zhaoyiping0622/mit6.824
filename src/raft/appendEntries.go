@@ -36,7 +36,7 @@ func (rf *Raft) updateMatchIdx(idx int, to int) {
 	}
 	rf.matchIdx[idx] = to
 	rf.nextIdx[idx] = to + 1
-	DPrintf("%v matchIdx %v change to %v all matchIdx %+v", rf.me, idx, rf.matchIdx[idx], rf.matchIdx)
+	DPrintf("%v matchIdx %v change to %v all matchIdx %+v", rf.id, idx, rf.matchIdx[idx], rf.matchIdx)
 	idxs := make([]int, 0, rf.n-1)
 	for i := range rf.matchIdx {
 		if i != rf.me {
@@ -52,7 +52,7 @@ func (rf *Raft) updateMatchIdx(idx int, to int) {
 		}
 		if lastCommitLog.Term == rf.CurrentTerm {
 			rf.commitIndex = commitIndex
-			DPrintf("%v change commitIndex to %v", rf.me, commitIndex)
+			DPrintf("%v change commitIndex to %v", rf.id, commitIndex)
 		}
 	}
 }
@@ -69,7 +69,7 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 	if rf.killed() {
 		return
 	}
-	DPrintf("%v get AppendEntries rpc from %v args %+v", rf.me, args.LeaderId, args)
+	DPrintf("%v get AppendEntries rpc from %v args %+v", rf.id, args.LeaderId, args)
 	ctx, cancel := context.WithCancel(rf.background)
 	go rf.sendEvent(&RespondAppendEntriesEvent{args, reply, cancel})
 	<-ctx.Done()
@@ -86,7 +86,7 @@ func (rf *Raft) appendEntriesToPeer(idx int) {
 		prevLog, err := rf.getLogByIndex(prevLogIndex)
 		if err != nil {
 			// prevLogIndex>=len(rf.Log)
-			DPrintf("%v failed to appendEntriesToPeer err %v", rf.me, err)
+			DPrintf("%v failed to appendEntriesToPeer err %v", rf.id, err)
 			return
 		}
 		prevLogTerm = prevLog.Term
@@ -105,12 +105,12 @@ func (rf *Raft) appendEntriesToPeer(idx int) {
 	}
 	go func() {
 		var reply AppendEntriesReply
-		DPrintf("%v send AppendEntries to %v args %+v", rf.me, idx, &args)
+		DPrintf("%v send AppendEntries to %v args %+v", rf.id, idx, &args)
 		if rf.sendAppendEntries(idx, &args, &reply) {
-			DPrintf("%v send AppendEntries to %v args %+v reply %+v", rf.me, idx, &args, reply)
+			DPrintf("%v send AppendEntries to %v args %+v reply %+v", rf.id, idx, &args, reply)
 			go rf.sendEvent(&ProcessAppendEntriesRespondEvent{idx, &args, &reply})
 		} else {
-			DPrintf("%v send AppendEntries to %v args %+v no reply", rf.me, idx, &args)
+			DPrintf("%v send AppendEntries to %v args %+v no reply", rf.id, idx, &args)
 		}
 	}()
 }
@@ -194,7 +194,7 @@ func (e *RespondAppendEntriesEvent) Run(rf *Raft) {
 			} else {
 				rf.commitIndex = args.LeaderCommit
 			}
-			DPrintf("%v commitIndex change from %v to %v", rf.me, preLeaderCommit, rf.commitIndex)
+			DPrintf("%v commitIndex change from %v to %v", rf.id, preLeaderCommit, rf.commitIndex)
 		}
 	}
 }

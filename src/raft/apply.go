@@ -16,7 +16,7 @@ func (e *ApplyEvent) Run(rf *Raft) {
 	for i := rf.applied + 1; i <= rf.commitIndex; i++ {
 		log, err := rf.getLogByIndex(i)
 		if err != nil {
-			DPrintf("%v in apply err %+v", rf.me, err)
+			DPrintf("%v in apply err %+v", rf.id, err)
 			return
 		}
 		msg := ApplyMsg{
@@ -28,7 +28,7 @@ func (e *ApplyEvent) Run(rf *Raft) {
 		case rf.applyCh <- msg:
 			rf.applied++
 		default:
-			DPrintf("%v applyCh blocked, wait and resend", rf.me)
+			DPrintf("%v applyCh blocked, wait and resend", rf.id)
 			return
 		}
 	}
