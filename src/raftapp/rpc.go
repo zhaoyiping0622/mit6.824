@@ -47,14 +47,15 @@ func (s *RpcServer) Request(request *OutterRpcArgs, reply *OutterRpcReply) {
 		},
 	}
   id:=rand.Int31()
+  pr:=PrettyPrint(request)
   if s.me >= 1000 {
-    DPrintf("id %v %v get request %+v command %T", id, s.me, PrettyPrint(request), request.Command)
+    DPrintf("id %v %v get request %+v command %T", id, s.me, pr, request.Command)
   }
 	r := s.controller.AsyncRequest(args)
 	reply.Err = r.Err
 	reply.Result = r.Result
   if s.me >= 1000 {
-	  DPrintf("id %v %v get request %+v command %T reply %+v result %+v", id, s.me, PrettyPrint(request), request.Command, r, r.Result)
+	  DPrintf("id %v %v get request %+v command %T reply %+v result %+v", id, s.me, pr, request.Command, r, r.Result)
   }
 }
 

@@ -48,7 +48,7 @@ type ShardController struct {
 
   term int
   isLeader int32
-  inited bool
+  inits int
 
   make_end func(string) *labrpc.ClientEnd
   make_innerClient func(servers []*labrpc.ClientEnd)*InnerClient
@@ -132,7 +132,10 @@ func (sc *ShardController) UpdateInfo() {
   }
   newInfo:=sc.ctrlerCli.Info()
   sc.mu.Lock()
-  if sc.currentInfo!=nil && sc.currentInfo.Config.Num==newInfo.Config.Num && sc.currentInfo.Version==newInfo.Version {
+  if sc.currentInfo!=nil && sc.currentInfo.Config.Num>=newInfo.Config.Num && sc.currentInfo.Version>=newInfo.Version {
+    if sc.inits==1 {
+      sc.inits++
+    }
     sc.mu.Unlock()
     return
   }
@@ -163,7 +166,7 @@ func (sc *ShardController) UpdateShard(shard int) raftapp.TickerFunc {
   var cli *InnerClient
   return func(ctx context.Context) {
     sc.mu.Lock()
-    if sc.currentInfo == nil || !sc.getIsLeader() || !sc.inited {
+    if sc.currentInfo == nil || !sc.getIsLeader() || sc.inits <= 1 {
       sc.mu.Unlock()
       return
     }
@@ -216,7 +219,7 @@ func (sc *ShardController) UpdateShard(shard int) raftapp.TickerFunc {
           getShardResult1:=cli.Send(&GetShard{
             InfoNum: config.Num,
             InfoVersion: info.Version,
-            From: sc.gid,
+            From: sc.me,
             Shard: shard,
             Version: shardInfo.Version,
           })
@@ -252,8 +255,7 @@ func (sc *ShardController) RunCommand(args *raftapp.AsyncRequestArgs) {
       func() {
         sc.mu.Lock()
         defer sc.mu.Unlock()
-        sc.inited=true
-        DPrintf("%v inited", sc.me)
+        sc.inits=1
       }()
       continue
     }
@@ -267,12 +269,7 @@ func (sc *ShardController) RunCommand(args *raftapp.AsyncRequestArgs) {
         shard:=c.Shard
         currentState:=sc.shardStates[shard]
         currentVersion:=sc.shardVersions[shard]
-        if c.Info!=nil {
-          info:=c.Info
-          if info.Config.Num > sc.currentInfo.Config.Num || info.Version > sc.currentInfo.Version {
-            sc.currentInfo=info
-          }
-        }
+        sc.tryUpdateInfo(c.Info)
         if c.Version < currentVersion || (c.Version==currentVersion && currentState >= c.To){
           return
         }
@@ -281,6 +278,7 @@ func (sc *ShardController) RunCommand(args *raftapp.AsyncRequestArgs) {
         for i:=range sc.shardWrappers {
           snapshots.AddSnapshots(sc.shardWrappers[i].ChangeShardState(shard, c.To, c.Snapshot.Snapshots[i]))
         }
+        DPrintf("%v shard %v state change from %+v to %+v Num %v Version %v", sc.me, shard, sc.shardStates[shard], c.To, sc.currentInfo.Config.Num, sc.currentInfo.Version)
         sc.shardStates[shard]=c.To
         sc.shardVersions[shard]=c.Version
         if c.To == LOCKED {
@@ -296,14 +294,24 @@ func (sc *ShardController) RunCommand(args *raftapp.AsyncRequestArgs) {
         sc.mu.Lock()
         defer sc.mu.Unlock()
         defer sc.shardNotice.SetValue(args.Location, args.SeqNum, &raftapp.AsyncRequestReply{ Err: raftapp.Ok, })
-        if sc.currentInfo!=nil && sc.currentInfo.Config.Num == c.Info.Config.Num && sc.currentInfo.Version == c.Info.Version {
-          return
-        }
-        sc.currentInfo=c.Info
-        DPrintf("%v updated info to version %v num %v", sc.me, c.Info.Version, c.Info.Config.Num)
+        sc.tryUpdateInfo(c.Info)
       }()
       }
     }
+  }
+}
+
+func (sc *ShardController) tryUpdateInfo(info *shardctrler.InfoResult) {
+  if info == nil {
+    return
+  }
+  if sc.inits == 1 {
+    sc.inits++
+    DPrintf("%v inited inits %v", sc.me, sc.inits)
+  }
+  if sc.currentInfo == nil || info.Config.Num > sc.currentInfo.Config.Num || info.Version > sc.currentInfo.Version {
+    sc.currentInfo=info
+    DPrintf("%v updated info to version %v num %v", sc.me, info.Version, info.Config.Num)
   }
 }
 

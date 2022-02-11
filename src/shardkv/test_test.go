@@ -836,7 +836,7 @@ func TestChallenge1Delete(t *testing.T) {
 // while the config change is underway
 //
 func TestChallenge2Unaffected(t *testing.T) {
-  t.SkipNow()
+  // t.SkipNow()
 	fmt.Printf("Test: unaffected shard access (challenge 2) ...\n")
 
 	cfg := make_config(t, 3, true, 100)
@@ -888,10 +888,13 @@ func TestChallenge2Unaffected(t *testing.T) {
 	// Wait to make sure clients see new config
 	<-time.After(1 * time.Second)
 
+  log.Printf("owned %+v ka %+v", owned, ka)
+
 	// And finally: check that gets/puts for 101-owned keys still complete
 	for i := 0; i < n; i++ {
 		shard := int(ka[i][0]) % 10
 		if owned[shard] {
+      log.Printf("put %v", i)
 			check(t, ck, ka[i], va[i])
 			ck.Put(ka[i], va[i]+"-1")
 			check(t, ck, ka[i], va[i]+"-1")

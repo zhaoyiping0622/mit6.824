@@ -88,7 +88,6 @@ func (s *RaftControllerImpl) GetInited() bool {
 }
 
 func (s *RaftControllerImpl) Run(ctx context.Context) {
-	s.ctx = ctx
 	for {
 		select {
 		case <-ctx.Done():
@@ -238,6 +237,7 @@ func (s *RaftControllerImpl) snapshot(r *SnapshotRequest) *SyncRequestReply {
 }
 
 func (c *RaftControllerImpl) Init(ctx context.Context, me int, applyCh <-chan raft.ApplyMsg, rf *raft.Raft, notice Notice, termNotices []TermNotice, executors []Executable, snapshotables []Snapshotable) {
+  c.ctx=ctx
 	c.me = me
 	c.applyCh = applyCh
 	c.rf = rf

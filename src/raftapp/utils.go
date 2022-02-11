@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 )
 
 func PrettyPrint(x interface{}) string {
-  s,_:=json.Marshal(x)
-  return string(s)
+  s,err:=json.Marshal(x)
+  if err!=nil {
+    return fmt.Sprintf("%+v", x)
+  } else {
+    return string(s)
+  }
 }
 
 func ZipData(snapshot Snapshot) Snapshot {

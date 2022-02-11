@@ -48,7 +48,6 @@ func (s *ShardWrapperImpl) GetShard(location raftapp.NoticeLocation) raftapp.Cle
 func (s *ShardWrapperImpl) ChangeShardState(shard int, to ShardState, snapshot raftapp.Snapshot) raftapp.Snapshot {
   s.mu.Lock()
   defer s.mu.Unlock()
-  DPrintf("%v shard %v state change from %+v to %+v", s.me, shard, s.states[shard], to)
   snapshot1:=s.generateShardSnapshot(shard)
   if to == LOCKED || to == MOVED {
     s.values[shard].Clean()
@@ -92,6 +91,7 @@ func (s *ShardWrapperImpl) ApplySnapshot(i raftapp.Snapshot) {
   var snapshot ShardWrapperImplSnapshot
   raftapp.SnapshotToValue(i, &snapshot)
   // DPrintf("%v %v shardwrapper apply snapshot %+v", s.me, s.name, raftapp.PrettyPrint(snapshot))
+  DPrintf("%v %v apply snapshot states %+v", s.me, s.name, snapshot.States)
 
   for i:=range s.values {
     s.states[i]=snapshot.States[i]

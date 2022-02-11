@@ -19,16 +19,6 @@ type ShardRaftClient struct {
 func (cli *ShardRaftClient) Send(shard int, command interface{}) interface{} {
   inc:=true
   for {
-    if cli.config != nil {
-      ok,result:=cli.clis[shard].SendWithShard(command, &ShardNoticeLocation{
-        NoticeLocation: cli.location,
-        Shard: shard,
-      }, inc)
-      if ok {
-        return result
-      }
-    }
-    inc=false
     cli.config=cli.ctrlerCli.Info().Config
     gid:=cli.config.Shards[shard]
     group:=cli.config.Groups[gid]
@@ -38,6 +28,16 @@ func (cli *ShardRaftClient) Send(shard int, command interface{}) interface{} {
       servers[i]=cli.make_end(group[i])
     }
     cli.clis[shard].SetServer(servers)
+    if cli.config != nil {
+      ok,result:=cli.clis[shard].SendWithShard(command, &ShardNoticeLocation{
+        NoticeLocation: cli.location,
+        Shard: shard,
+      }, inc)
+      if ok {
+        return result
+      }
+      inc=false
+    }
   }
 }
 
