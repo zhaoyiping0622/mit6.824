@@ -43,7 +43,7 @@ func (s *RpcServer) Request(request *OutterRpcArgs, reply *OutterRpcReply) {
 		Command: request.Command,
 		Location: &ExecutorLocationImpl{
 			NoticeLocation: request.Location,
-			ExecutorIds:    s.rpcExecutorId,
+			ExecutorIds:    append(make([]int64,0), s.rpcExecutorId...),
 		},
 	}
   id:=rand.Int31()

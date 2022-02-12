@@ -1,8 +1,6 @@
 package raftapp
 
 import (
-	"bytes"
-
 	"6.824/labgob"
 	"6.824/raft"
 )
@@ -39,22 +37,4 @@ type Cleanable interface {
 type CleanSnapshotable interface {
   Snapshotable
   Cleanable
-}
-
-func ValueToSnapshot(x interface{}) Snapshot {
-  buffer:=new(bytes.Buffer)
-  encoder:=labgob.NewEncoder(buffer)
-  err:=encoder.Encode(x)
-  if err!=nil {
-    panic(err)
-  }
-  return buffer.Bytes()
-}
-
-func SnapshotToValue(b Snapshot, x interface{}) {
-  decoder:=labgob.NewDecoder(bytes.NewBuffer(b))
-  err:=decoder.Decode(x)
-  if err!=nil {
-    panic(err)
-  }
 }

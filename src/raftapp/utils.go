@@ -3,18 +3,20 @@ package raftapp
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"fmt"
 	"io"
+
+	"6.824/labgob"
 )
 
 func PrettyPrint(x interface{}) string {
-  s,err:=json.Marshal(x)
-  if err!=nil {
+  // s,err:=json.Marshal(x)
+  // if err!=nil {
+  //   return fmt.Sprintf("%+v", x)
+  // } else {
+  //   return string(s)
+  // }
     return fmt.Sprintf("%+v", x)
-  } else {
-    return string(s)
-  }
 }
 
 func ZipData(snapshot Snapshot) Snapshot {
@@ -41,4 +43,22 @@ func UnzipData(snapshot Snapshot) Snapshot {
     panic(err)
   }
   return buf.Bytes()
+}
+
+func ValueToSnapshot(x interface{}) Snapshot {
+  buffer:=new(bytes.Buffer)
+  encoder:=labgob.NewEncoder(buffer)
+  err:=encoder.Encode(x)
+  if err!=nil {
+    panic(err)
+  }
+  return buffer.Bytes()
+}
+
+func SnapshotToValue(b Snapshot, x interface{}) {
+  decoder:=labgob.NewDecoder(bytes.NewBuffer(b))
+  err:=decoder.Decode(x)
+  if err!=nil {
+    panic(err)
+  }
 }
