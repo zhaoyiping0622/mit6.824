@@ -93,13 +93,15 @@ func (s *RaftControllerImpl) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case msg, ok := <-s.applyCh:
+      var copyMsg raft.ApplyMsg
+      DeepCopy(msg, &copyMsg)
 			if ok {
-				if msg.CommandValid {
-					s.applyCommand(msg)
-				} else if msg.SnapshotValid {
-					s.applySnapshot(msg)
+				if copyMsg.CommandValid {
+					s.applyCommand(copyMsg)
+				} else if copyMsg.SnapshotValid {
+					s.applySnapshot(copyMsg)
 				} else {
-					DPrintf("%v get invalid msg %+v", s.me, msg)
+					DPrintf("%v get invalid msg %+v", s.me, copyMsg)
 					continue
 				}
 			} else {
@@ -159,13 +161,15 @@ func (s *RaftControllerImpl) applySnapshot(msg raft.ApplyMsg) {
 }
 
 func (s *RaftControllerImpl) AsyncRequest(args *AsyncRequestArgs) *AsyncRequestReply {
-	ch := s.notice.GetValue(args.Location, args.SeqNum)
+  var copyArgs AsyncRequestArgs
+  DeepCopy(args, &copyArgs)
+	ch := s.notice.GetValue(copyArgs.Location, copyArgs.SeqNum)
 	var value interface{}
 	var ok bool
 	select {
 	case value, ok = <-ch:
 	default:
-		_, _, isLeader := s.rf.Start(args)
+		_, _, isLeader := s.rf.Start(copyArgs)
 		if !isLeader {
 			break
 		}

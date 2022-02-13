@@ -62,3 +62,7 @@ func SnapshotToValue(b Snapshot, x interface{}) {
     panic(err)
   }
 }
+
+func DeepCopy(src interface{}, dst interface{}) {
+  SnapshotToValue(ValueToSnapshot(src), dst)
+}
