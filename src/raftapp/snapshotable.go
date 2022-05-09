@@ -6,23 +6,23 @@ import (
 )
 
 func init() {
-  labgob.Register(&SnapshotGroup{})
+	labgob.Register(&SnapshotGroup{})
 }
 
-type Snapshot=raft.Snapshot
+type Snapshot = raft.Snapshot
 
 type SnapshotGroup struct {
-  Snapshots []Snapshot
+	Snapshots []Snapshot
 }
 
 func (s *SnapshotGroup) AddSnapshots(ss ...Snapshot) *SnapshotGroup {
-  s.Snapshots=append(s.Snapshots, ss...)
-  return s
+	s.Snapshots = append(s.Snapshots, ss...)
+	return s
 }
 
 func (s *SnapshotGroup) SetSnapshots(ss ...Snapshot) *SnapshotGroup {
-  s.Snapshots=ss
-  return s
+	s.Snapshots = ss
+	return s
 }
 
 type Snapshotable interface {
@@ -31,10 +31,10 @@ type Snapshotable interface {
 }
 
 type Cleanable interface {
-  Clean()
+	Clean()
 }
 
 type CleanSnapshotable interface {
-  Snapshotable
-  Cleanable
+	Snapshotable
+	Cleanable
 }

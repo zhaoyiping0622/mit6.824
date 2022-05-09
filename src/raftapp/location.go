@@ -46,8 +46,8 @@ func (l *ExecutorLocationImpl) GetExecutorIds() []int64 {
 }
 
 func MakeLocation(sessionId int64, executorId ...int64) Location {
-  return &ExecutorLocationImpl{
-    NoticeLocation: &SessionLocation{sessionId},
-    ExecutorIds: executorId,
-  }
+	return &ExecutorLocationImpl{
+		NoticeLocation: &SessionLocation{sessionId},
+		ExecutorIds:    executorId,
+	}
 }

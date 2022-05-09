@@ -8,13 +8,11 @@ import (
 	"6.824/raftapp/shard"
 )
 
-
 type ShardKV struct {
-	rf           *raft.Raft
+	rf *raft.Raft
 	// Your definitions here.
-  *shard.ShardServer
+	*shard.ShardServer
 }
-
 
 //
 // the tester calls Kill() when a ShardKV instance won't
@@ -24,9 +22,8 @@ type ShardKV struct {
 //
 func (kv *ShardKV) Kill() {
 	// Your code here, if desired.
-  kv.ShardServer.Kill()
+	kv.ShardServer.Kill()
 }
-
 
 //
 // servers[] contains the ports of the servers in this group.
@@ -59,10 +56,10 @@ func (kv *ShardKV) Kill() {
 func StartServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persister, maxraftstate int, gid int, ctrlers []*labrpc.ClientEnd, make_end func(string) *labrpc.ClientEnd) *ShardKV {
 
 	kv := new(ShardKV)
-  kv.ShardServer=shard.MakeShardServer(servers, me, persister, maxraftstate, gid, ctrlers, make_end, "ShardKV", func(shard int) raftapp.InnerExecutor {
-    return kvraft.MakeKvStore()
-  })
-  kv.rf=kv.ShardServer.GetRaft()
+	kv.ShardServer = shard.MakeShardServer(servers, me, persister, maxraftstate, gid, ctrlers, make_end, "ShardKV", func(shard int) raftapp.InnerExecutor {
+		return kvraft.MakeKvStore()
+	})
+	kv.rf = kv.ShardServer.GetRaft()
 
 	return kv
 }

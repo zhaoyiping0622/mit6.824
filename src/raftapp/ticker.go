@@ -45,31 +45,31 @@ func DefaultTicker() Ticker {
 }
 
 func MakeTermTicker(rf *raft.Raft, me int, c RaftController) Ticker {
-  term,isLeader:=0,false
-  return DefaultTicker().SetTickerFunc(func(ctx context.Context) {
-    termA,isLeaderA:=rf.GetState()
-    if termA != term || isLeaderA != isLeader {
-      if isLeaderA {
-        DPrintf("%v change to leader", me)
-      }
-      term=termA
-      isLeader=isLeaderA
-      c.SyncRequest(&SyncRequestArgs{
-        Command: &TermRequest{
-          Term: term,
-          IsLeader: isLeader,
-      }})
-    }
-  }) // term ticker
+	term, isLeader := 0, false
+	return DefaultTicker().SetTickerFunc(func(ctx context.Context) {
+		termA, isLeaderA := rf.GetState()
+		if termA != term || isLeaderA != isLeader {
+			if isLeaderA {
+				DPrintf("%v change to leader", me)
+			}
+			term = termA
+			isLeader = isLeaderA
+			c.SyncRequest(&SyncRequestArgs{
+				Command: &TermRequest{
+					Term:     term,
+					IsLeader: isLeader,
+				}})
+		}
+	}) // term ticker
 }
 
 func MakeSnapshotTicker(maxraftstate int, persister *raft.Persister, c RaftController) Ticker {
-    return DefaultTicker().SetTickerFunc(func(ctx context.Context) {
-      if maxraftstate == -1 {
-        return
-      }
-      if persister.RaftStateSize() >= maxraftstate {
-        c.SyncRequest(&SyncRequestArgs{ Command: &SnapshotRequest{ Ctx: ctx } })
-      }
-    })
+	return DefaultTicker().SetTickerFunc(func(ctx context.Context) {
+		if maxraftstate == -1 {
+			return
+		}
+		if persister.RaftStateSize() >= maxraftstate {
+			c.SyncRequest(&SyncRequestArgs{Command: &SnapshotRequest{Ctx: ctx}})
+		}
+	})
 }

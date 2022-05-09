@@ -18,18 +18,18 @@ type RaftClient struct {
 
 func (cli *RaftClient) SendWithShard(command interface{}, location NoticeLocation, inc bool) (bool, interface{}) {
 	leader := cli.lastLeader
-  if inc {
-    cli.seqNum++
-  }
+	if inc {
+		cli.seqNum++
+	}
 	defer func() { cli.lastLeader = leader }()
 	args := &OutterRpcArgs{
 		Location: location,
 		SeqNum:   cli.seqNum,
 		Command:  command,
 	}
-  if len(cli.servers) == 0 {
-    return false, nil
-  }
+	if len(cli.servers) == 0 {
+		return false, nil
+	}
 	for {
 		if leader >= len(cli.servers) {
 			leader = 0
@@ -55,13 +55,13 @@ func (cli *RaftClient) SendWithShard(command interface{}, location NoticeLocatio
 }
 
 func (cli *RaftClient) SetServer(servers []*labrpc.ClientEnd) {
-  cli.servers=servers
+	cli.servers = servers
 }
 
 func MakeRaftClient(servers []*labrpc.ClientEnd, name string) *RaftClient {
-  if !strings.Contains(name, ".") {
-    name=name+".Request"
-  }
+	if !strings.Contains(name, ".") {
+		name = name + ".Request"
+	}
 	return &RaftClient{
 		servers: servers,
 		name:    name,
@@ -74,4 +74,3 @@ func Nrand() int64 {
 	x := bigx.Int64()
 	return x
 }
-

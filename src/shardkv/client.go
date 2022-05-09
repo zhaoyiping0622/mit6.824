@@ -30,7 +30,7 @@ func key2shard(key string) int {
 }
 
 type Clerk struct {
-  *shard.ShardRaftClient
+	*shard.ShardRaftClient
 }
 
 //
@@ -44,25 +44,25 @@ type Clerk struct {
 //
 func MakeClerk(ctrlers []*labrpc.ClientEnd, make_end func(string) *labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
-  ck.ShardRaftClient=shard.MakeShardRaftClient(ctrlers, "ShardKV", make_end)
+	ck.ShardRaftClient = shard.MakeShardRaftClient(ctrlers, "ShardKV", make_end)
 	return ck
 }
 
 func (ck *Clerk) Get(key string) string {
-  return ck.Send(key2shard(key), &kvraft.GET{
-    Key: key,
-  }).(string)
+	return ck.Send(key2shard(key), &kvraft.GET{
+		Key: key,
+	}).(string)
 }
 
 func (ck *Clerk) Put(key string, value string) {
-  ck.Send(key2shard(key), &kvraft.PUT{
-    Key: key,
-    Value: value,
-  })
+	ck.Send(key2shard(key), &kvraft.PUT{
+		Key:   key,
+		Value: value,
+	})
 }
 func (ck *Clerk) Append(key string, value string) {
-  ck.Send(key2shard(key), &kvraft.APPEND{
-    Key: key,
-    Value: value,
-  })
+	ck.Send(key2shard(key), &kvraft.APPEND{
+		Key:   key,
+		Value: value,
+	})
 }

@@ -16,17 +16,17 @@ type Notice interface {
 	TermNotice
 }
 
-type WrongGroupNotice struct {}
+type WrongGroupNotice struct{}
 
 func (n *WrongGroupNotice) SetValue(location NoticeLocation, seqNum int, value *AsyncRequestReply) {
-  panic("impossible")
+	panic("impossible")
 }
 
 func (n *WrongGroupNotice) GetValue(location NoticeLocation, seqNum int) <-chan *AsyncRequestReply {
-  ch:=make(chan *AsyncRequestReply, 1)
-  ch<-&AsyncRequestReply{ Err: WrongGroup }
-  close(ch)
-  return ch
+	ch := make(chan *AsyncRequestReply, 1)
+	ch <- &AsyncRequestReply{Err: WrongGroup}
+	close(ch)
+	return ch
 }
 
 func (n *WrongGroupNotice) HasValue(location NoticeLocation, seqNum int) bool { return true }

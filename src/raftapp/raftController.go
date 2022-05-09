@@ -74,17 +74,17 @@ type RaftControllerImpl struct {
 	termNotice     []TermNotice
 	snapshotables  []Snapshotable
 	ctx            context.Context
-  inited int32
+	inited         int32
 }
 
 func (s *RaftControllerImpl) SetInited(inited bool) {
-  if inited {
-    atomic.StoreInt32(&s.inited, 1)
-  }
+	if inited {
+		atomic.StoreInt32(&s.inited, 1)
+	}
 }
 
 func (s *RaftControllerImpl) GetInited() bool {
-  return atomic.LoadInt32(&s.inited) == 1
+	return atomic.LoadInt32(&s.inited) == 1
 }
 
 func (s *RaftControllerImpl) Run(ctx context.Context) {
@@ -93,8 +93,8 @@ func (s *RaftControllerImpl) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case msg, ok := <-s.applyCh:
-      var copyMsg raft.ApplyMsg
-      DeepCopy(msg, &copyMsg)
+			var copyMsg raft.ApplyMsg
+			DeepCopy(msg, &copyMsg)
 			if ok {
 				if copyMsg.CommandValid {
 					s.applyCommand(copyMsg)
@@ -124,16 +124,16 @@ func (s *RaftControllerImpl) applyCommand(msg raft.ApplyMsg) {
 	s.lastApplied++
 	op := msg.Command.(*Op)
 
-  // DPrintf("%v apply Command %T%+v", s.me, op.Command, op.Command)
-  wg := sync.WaitGroup{}
-  wg.Add(len(s.executors))
-  for _, e := range s.executors {
-    go func(e Executable) {
-      defer wg.Done()
-      e.RunCommand(op)
-    }(e)
-  }
-  wg.Wait()
+	// DPrintf("%v apply Command %T%+v", s.me, op.Command, op.Command)
+	wg := sync.WaitGroup{}
+	wg.Add(len(s.executors))
+	for _, e := range s.executors {
+		go func(e Executable) {
+			defer wg.Done()
+			e.RunCommand(op)
+		}(e)
+	}
+	wg.Wait()
 }
 
 func (s *RaftControllerImpl) applySnapshot(msg raft.ApplyMsg) {
@@ -141,9 +141,9 @@ func (s *RaftControllerImpl) applySnapshot(msg raft.ApplyMsg) {
 	defer s.mu.Unlock()
 	// DPrintf("%v get msg %+v", s.me, PrettyPrint(msg))
 	if s.rf.CondInstallSnapshot(msg.SnapshotTerm, msg.SnapshotIndex, msg.Snapshot) && s.lastApplied < msg.SnapshotIndex {
-    // TODO: unzip msg.Snapshot
+		// TODO: unzip msg.Snapshot
 		var snapshot SnapshotGroup
-    SnapshotToValue(UnzipData(msg.Snapshot), &snapshot)
+		SnapshotToValue(UnzipData(msg.Snapshot), &snapshot)
 		wg := sync.WaitGroup{}
 		wg.Add(len(s.snapshotables))
 		for i, e := range s.snapshotables {
@@ -161,8 +161,8 @@ func (s *RaftControllerImpl) applySnapshot(msg raft.ApplyMsg) {
 }
 
 func (s *RaftControllerImpl) AsyncRequest(args *AsyncRequestArgs) *AsyncRequestReply {
-  var copyArgs AsyncRequestArgs
-  DeepCopy(args, &copyArgs)
+	var copyArgs AsyncRequestArgs
+	DeepCopy(args, &copyArgs)
 	ch := s.notice.GetValue(copyArgs.Location, copyArgs.SeqNum)
 	var value interface{}
 	var ok bool
@@ -203,7 +203,7 @@ func (s *RaftControllerImpl) SyncRequest(args *SyncRequestArgs) *SyncRequestRepl
 func (s *RaftControllerImpl) updateTerm(r *TermRequest) *SyncRequestReply {
 	wg := sync.WaitGroup{}
 	wg.Add(len(s.termNotice))
-  // DPrintf("%v update TermRequest %+v", s.me, *r)
+	// DPrintf("%v update TermRequest %+v", s.me, *r)
 	for _, n := range s.termNotice {
 		go func(n TermNotice) {
 			defer wg.Done()
@@ -217,8 +217,8 @@ func (s *RaftControllerImpl) updateTerm(r *TermRequest) *SyncRequestReply {
 func (s *RaftControllerImpl) snapshot(r *SnapshotRequest) *SyncRequestReply {
 	s.mu.Lock()
 	snapshot := SnapshotGroup{
-    Snapshots: make([]raft.Snapshot, len(s.snapshotables)),
-  }
+		Snapshots: make([]raft.Snapshot, len(s.snapshotables)),
+	}
 	wg := sync.WaitGroup{}
 	wg.Add(len(s.snapshotables))
 	for i, e := range s.snapshotables {
@@ -228,7 +228,7 @@ func (s *RaftControllerImpl) snapshot(r *SnapshotRequest) *SyncRequestReply {
 		}(i, e)
 	}
 	wg.Wait()
-  // TODO: zip snapshot
+	// TODO: zip snapshot
 	index := s.lastApplied
 	if s.rf.Snapshot(index, ZipData(ValueToSnapshot(snapshot))) {
 		s.snapshotCtx, s.snapshotFinish = context.WithCancel(r.Ctx)
@@ -241,7 +241,7 @@ func (s *RaftControllerImpl) snapshot(r *SnapshotRequest) *SyncRequestReply {
 }
 
 func (c *RaftControllerImpl) Init(ctx context.Context, me int, applyCh <-chan raft.ApplyMsg, rf *raft.Raft, notice Notice, termNotices []TermNotice, executors []Executable, snapshotables []Snapshotable) {
-  c.ctx=ctx
+	c.ctx = ctx
 	c.me = me
 	c.applyCh = applyCh
 	c.rf = rf
@@ -249,15 +249,17 @@ func (c *RaftControllerImpl) Init(ctx context.Context, me int, applyCh <-chan ra
 	c.termNotice = termNotices
 	c.executors = append(executors, MakeInitExecutor(c, notice))
 	c.snapshotables = snapshotables
-  sessionId:=Nrand()
-  seqNum:=0
-  go DefaultTicker().SetTickerDuration(100*time.Millisecond).SetTickerFunc(func(ctx context.Context) {
-    if c.GetInited() { return }
-    seqNum++
-    c.AsyncRequest(&AsyncRequestArgs{
-      Location: MakeLocation(sessionId, ExecutorIdInit),
-      SeqNum: seqNum,
-      Command: nil,
-    })
-  }).TickerRun(ctx)
+	sessionId := Nrand()
+	seqNum := 0
+	go DefaultTicker().SetTickerDuration(100 * time.Millisecond).SetTickerFunc(func(ctx context.Context) {
+		if c.GetInited() {
+			return
+		}
+		seqNum++
+		c.AsyncRequest(&AsyncRequestArgs{
+			Location: MakeLocation(sessionId, ExecutorIdInit),
+			SeqNum:   seqNum,
+			Command:  nil,
+		})
+	}).TickerRun(ctx)
 }

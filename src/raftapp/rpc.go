@@ -5,7 +5,7 @@ import "math/rand"
 type Err int
 
 const (
-  WrongLeader	Err = iota
+	WrongLeader Err = iota
 	Ok
 	WrongGroup
 )
@@ -38,25 +38,29 @@ type RpcServer struct {
 }
 
 func (s *RpcServer) Request(request *OutterRpcArgs, reply *OutterRpcReply) {
+	if request.Location == nil {
+		DPrintf("%v get nil location request %+v", s.me, request)
+		return
+	}
 	args := &AsyncRequestArgs{
 		SeqNum:  request.SeqNum,
 		Command: request.Command,
 		Location: &ExecutorLocationImpl{
 			NoticeLocation: request.Location,
-			ExecutorIds:    append(make([]int64,0), s.rpcExecutorId...),
+			ExecutorIds:    append(make([]int64, 0), s.rpcExecutorId...),
 		},
 	}
-  id:=rand.Int31()
-  pr:=PrettyPrint(request)
-  if s.me >= 1000 {
-    DPrintf("id %v %v get request %+v command %T", id, s.me, pr, request.Command)
-  }
+	id := rand.Int31()
+	pr := PrettyPrint(request)
+	if s.me >= 1000 {
+		DPrintf("id %v %v get request %+v command %T", id, s.me, pr, request.Command)
+	}
 	r := s.controller.AsyncRequest(args)
 	reply.Err = r.Err
 	reply.Result = r.Result
-  if s.me >= 1000 {
-	  DPrintf("id %v %v get request %+v command %T reply %+v result %+v", id, s.me, pr, request.Command, r, r.Result)
-  }
+	if s.me >= 1000 {
+		DPrintf("id %v %v get request %+v command %T reply %+v result %+v", id, s.me, pr, request.Command, r, r.Result)
+	}
 }
 
 func MakeRpcServer(me int, executorId []int64, controller RaftController) *RpcServer {
